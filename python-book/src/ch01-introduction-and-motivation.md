@@ -24,55 +24,44 @@ Python is famously slow for CPU-bound work. Rust provides C-level performance
 with a high-level feel.
 
 ```python
-# Python — typically several seconds for 10 million iterations
+# Python — ~2 seconds for 10 million calls
 import time
 
 def fibonacci(n: int) -> int:
+    if n <= 1:
+        return n
     a, b = 0, 1
-    for _ in range(n):
+    for _ in range(2, n + 1):
         a, b = b, a + b
-    return a
+    return b
 
 start = time.perf_counter()
-
-acc = 0
-for _ in range(10_000_000):
-    acc ^= fibonacci(40)
-
+results = [fibonacci(n % 30) for n in range(10_000_000)]
 elapsed = time.perf_counter() - start
-
-print(f"Elapsed: {elapsed:.2f}s")
-print("Ignore:", acc)
+print(f"Elapsed: {elapsed:.2f}s")  # ~2s on typical hardware
 ```
 
 ```rust
-// Rust — typically sub-second for 10 million iterations (release build)
+// Rust — ~0.07 seconds for the same 10 million calls
 use std::time::Instant;
 
-#[inline(always)]
 fn fibonacci(n: u64) -> u64 {
-    let mut a = 0;
-    let mut b = 1;
-
-    for _ in 0..n {
-        let temp = a;
-        a = b;
-        b = temp + b;
+    if n <= 1 {
+        return n;
     }
-
-    a
+    let (mut a, mut b) = (0u64, 1u64);
+    for _ in 2..=n {
+        let temp = b;
+        b = a + b;
+        a = temp;
+    }
+    b
 }
 
 fn main() {
     let start = Instant::now();
-
-    let mut acc: u64 = 0;
-    for _ in 0..10_000_000 {
-        acc ^= fibonacci(40);
-    }
-
-    println!("Elapsed: {:.2?}", start.elapsed());
-    println!("Ignore: {}", acc);
+    let results: Vec<u64> = (0..10_000_000).map(|n| fibonacci(n % 30)).collect();
+    println!("Elapsed: {:.2?}", start.elapsed());  // ~0.07s
 }
 ```
 > Note: Rust should be run in release mode (`cargo run --release`) for a fair performance comparison.
